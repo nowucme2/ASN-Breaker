@@ -61,30 +61,10 @@ def run_naabu(ip_file, project_dir, reuse):
     return ports_file
 
 
-def run_httpx(ports_file, project_dir):
-
-    http_file = f"{project_dir}/http.txt"
-
-    if os.path.exists(http_file):
-
-        print("\nUsing existing HTTP results.")
-        return http_file
-
-    print("\nRunning httpx-toolkit")
-
-    cmd = f"cat {ports_file} | httpx-toolkit -silent -o {http_file}"
-
-    subprocess.run(cmd, shell=True)
-
-    return http_file
-
-
 def run_scanner(subnets, project_dir, reuse):
 
     ip_file = generate_ips(subnets, project_dir)
 
-    ports_file = run_naabu(ip_file, project_dir, reuse)
+    run_naabu(ip_file, project_dir, reuse)
 
-    http_file = run_httpx(ports_file, project_dir)
-
-    return http_file
+    return ip_file
