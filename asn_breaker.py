@@ -1,13 +1,13 @@
 import argparse
 
-from modules.banner import show_banner
-from modules.dependency_check import check_dependencies
-from modules.bbot_parser import parse_bbot_table
-from modules.subnet_intel import analyze_subnets
-from modules.asn_lookup import get_asn_prefixes
-from modules.scanner import run_scanner
-from modules.web_scan import run_web_scan
-from modules.report import generate_report
+from module.banner import show_banner
+from module.dependency_check import check_dependencies
+from module.bbot_parser import parse_bbot_table
+from module.subnet_intel import analyze_subnets
+from module.asn_lookup import get_asn_prefixes
+from module.scanner import run_scanner
+from module.web_scan import run_web_scan
+from module.report import generate_report
 
 
 def main():
