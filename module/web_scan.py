@@ -1,59 +1,62 @@
 import subprocess
-import os
+from pathlib import Path
 
 
-def run_web_scan(ports_file, project_dir):
+def run_httpx(input_ports, output_json):
 
-    http_file = f"{project_dir}/http.txt"
-    screenshots_dir = f"{project_dir}/screenshots"
-    nuclei_file = f"{project_dir}/nuclei.txt"
+    if Path(output_json).exists() and Path(output_json).stat().st_size > 0:
+        print("[✓] Reusing httpx results")
+        return
 
-    os.makedirs(screenshots_dir, exist_ok=True)
-
-    print("\nRunning httpx-toolkit\n")
-
-    httpx_cmd = [
+    cmd = [
         "httpx-toolkit",
-        "-l", ports_file,
-        "-silent",
-        "-o", http_file
+        "-l",
+        input_ports,
+        "-title",
+        "-tech-detect",
+        "-status-code",
+        "-server",
+        "-json",
+        "-o",
+        output_json
     ]
 
-    subprocess.run(httpx_cmd)
+    subprocess.run(cmd)
 
-    # If no HTTP services found
-    if not os.path.exists(http_file) or os.path.getsize(http_file) == 0:
-        print("No HTTP services discovered")
-        return http_file, None
 
-    print("\nRunning Gowitness screenshots\n")
+def run_gowitness(url_file, output_dir):
 
-    gowitness_cmd = [
+    db = Path(output_dir) / "gowitness.db"
+
+    if db.exists():
+        print("[✓] Reusing gowitness db")
+        return
+
+    cmd = [
         "gowitness",
         "scan",
         "file",
-        "-f", http_file,
-        "--threads", "20",
+        "-f",
+        url_file,
         "--write-db",
-        "--screenshot-path", screenshots_dir
+        str(db),
+        "--screenshot-path",
+        str(Path(output_dir) / "screenshots")
     ]
 
-    subprocess.run(gowitness_cmd, cwd=project_dir)
+    subprocess.run(cmd)
 
-    run_nuclei = input("\nRun Nuclei scan? (y/n): ").lower()
 
-    if run_nuclei == "y":
+def run_nuclei(url_file, output_file):
 
-        print("\nRunning Nuclei\n")
+    cmd = [
+        "nuclei",
+        "-l",
+        url_file,
+        "-severity",
+        "critical,high,medium",
+        "-o",
+        output_file
+    ]
 
-        nuclei_cmd = [
-            "nuclei",
-            "-l", http_file,
-            "-o", nuclei_file
-        ]
-
-        subprocess.run(nuclei_cmd)
-
-        return http_file, nuclei_file
-
-    return http_file, None
+    subprocess.run(cmd)
