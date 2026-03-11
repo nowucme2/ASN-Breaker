@@ -56,7 +56,6 @@ def generate_ips(subnets, project_dir):
     for entry in subnets:
 
         subnet = entry["subnet"]
-
         limit = entry["limit"]
 
         network = ipaddress.IPv4Network(subnet)
@@ -69,14 +68,12 @@ def generate_ips(subnets, project_dir):
                 break
 
             all_ips.append(str(ip))
-
             count += 1
 
     total_ips = len(all_ips)
 
     scan_limit = ask_scan_limit(total_ips)
 
-    # Randomize IP selection for better coverage
     random.shuffle(all_ips)
 
     selected_ips = all_ips[:scan_limit]
@@ -88,7 +85,7 @@ def generate_ips(subnets, project_dir):
         for ip in selected_ips:
             f.write(ip + "\n")
 
-    print(f"\nSaved {scan_limit} IPs for scanning")
+    print(f"\nSaved {scan_limit} IPs for scanning\n")
 
     return ip_file
 
@@ -113,9 +110,7 @@ def run_naabu(ip_file, project_dir):
 
     except KeyboardInterrupt:
 
-        print("\n\nScan interrupted by user (Ctrl+C)")
-        print("Stopping Naabu scan safely...\n")
-
+        print("\nScan interrupted by user")
         sys.exit(0)
 
     return ports_file
@@ -123,17 +118,24 @@ def run_naabu(ip_file, project_dir):
 
 def run_scanner(subnets, project_dir, reuse=False):
 
-    try:
+    ports_file = f"{project_dir}/ports.txt"
 
-        ip_file = generate_ips(subnets, project_dir)
+    # -------------------------
+    # Reuse existing scan
+    # -------------------------
 
-        ports_file = run_naabu(ip_file, project_dir)
+    if reuse and os.path.exists(ports_file):
+
+        print("\nUsing existing Naabu scan results\n")
 
         return ports_file
 
-    except KeyboardInterrupt:
+    # -------------------------
+    # Run fresh scan
+    # -------------------------
 
-        print("\n\nScan interrupted by user.")
-        print("Exiting ASN Breaker safely.\n")
+    ip_file = generate_ips(subnets, project_dir)
 
-        sys.exit(0)
+    ports_file = run_naabu(ip_file, project_dir)
+
+    return ports_file
