@@ -1,33 +1,34 @@
 import os
-import sys
 
 
 def init_project():
 
-    name = input("\nEnter project name: ").strip()
+    project = input("Enter project name: ").strip()
 
-    project_dir = f"output/{name}"
+    base = f"output/{project}"
 
-    if os.path.exists(project_dir):
+    if os.path.exists(base):
 
-        print("\nProject already exists.")
+        print("Project already exists.")
 
         print("1) Use existing scan data")
         print("2) Run new scan")
         print("3) Exit")
 
-        choice = input("\nSelect option: ").strip()
+        choice = input("Select option: ")
 
         if choice == "1":
-            return project_dir, True
+
+            return base, True
 
         elif choice == "2":
-            return project_dir, False
+
+            return base, False
 
         else:
-            sys.exit()
 
-    os.makedirs(project_dir)
-    os.makedirs(f"{project_dir}/screenshots")
+            exit()
 
-    return project_dir, False
+    os.makedirs(base, exist_ok=True)
+
+    return base, False
