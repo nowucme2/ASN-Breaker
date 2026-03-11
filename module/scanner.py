@@ -7,7 +7,8 @@ OUTPUT="output"
 
 def generate_ips(subnets):
 
-    file=f"{OUTPUT}/ips.txt"
+    os.makedirs(OUTPUT, exist_ok=True)
+    file = f"{OUTPUT}/ips.txt"
 
     with open(file,"w") as f:
 
