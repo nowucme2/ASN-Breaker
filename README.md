@@ -5,7 +5,7 @@
 <!-- =============================== -->
 
 <p align="center">
-<img src="assests/ChatGPT Image Mar 11, 2026, 09_31_12 PM.png " width="550"/>
+<img src="assests/Image Mar 11, 2026, 09_31_12 PM.png" width="450"/>
 </p>
 
 <h1 align="center">ASN Breaker</h1>
