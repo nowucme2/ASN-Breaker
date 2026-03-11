@@ -1,57 +1,18 @@
-import os
+def generate_report(subnets, project_dir):
 
+    report = f"{project_dir}/report.html"
 
-def generate_report(subnets):
+    with open(report, "w") as f:
 
-    ips=open("output/ips.txt").read()
+        f.write("<html><body>")
+        f.write("<h1>ASN Breaker Report</h1>")
 
-    http=open("output/http.txt").read()
+        f.write("<h2>Subnets</h2><ul>")
 
-    nuclei=""
+        for s in subnets:
 
-    if os.path.exists("output/nuclei.txt"):
+            f.write(f"<li>{s['subnet']}</li>")
 
-        nuclei=open("output/nuclei.txt").read()
+        f.write("</ul></body></html>")
 
-    rows=""
-
-    for s in subnets:
-
-        rows+=f"<tr><td>{s['subnet']}</td><td>{s['limit']}</td></tr>"
-
-    html=f"""
-<html>
-<h1>ASN Breaker Report</h1>
-
-<h2>Subnets</h2>
-
-<table border=1>
-<tr><th>Subnet</th><th>Limit</th></tr>
-{rows}
-</table>
-
-<h2>Download IP List</h2>
-
-<button onclick="download()">Download</button>
-
-<script>
-function download(){{
-var text=`{ips}`;
-var blob=new Blob([text]);
-var link=document.createElement("a");
-link.href=URL.createObjectURL(blob);
-link.download="ips.txt";
-link.click();
-}}
-</script>
-
-<h2>HTTP Services</h2>
-<pre>{http}</pre>
-
-<h2>Nuclei Results</h2>
-<pre>{nuclei}</pre>
-
-</html>
-"""
-
-    open("output/report.html","w").write(html)
+    print(f"\nReport generated: {report}")
