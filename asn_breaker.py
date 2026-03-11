@@ -1,64 +1,91 @@
-#!/usr/bin/env python3
-
 import argparse
+from pathlib import Path
 
 from module.banner import show_banner
 from module.dependency_check import check_dependencies
-from module.bbot_parser import parse_bbot_table
-from module.subnet_intel import analyze_subnets
-from module.asn_lookup import get_asn_prefixes
-from module.project import init_project
-from module.scanner import run_scanner
-from module.web_scan import run_web_scan
-from module.report import generate_report
+from module.project import create_project
+from module.bbot_parser import parse_bbot_file
+from module.subnet_intel import clean_subnets, sample_ips
+from module.scanner import run_naabu
+from module.web_scan import run_httpx, run_gowitness, run_nuclei
+from module.report import generate_html_report
 
 
 def main():
 
-    show_banner()
+    parser = argparse.ArgumentParser()
 
-    check_dependencies()
-
-    parser = argparse.ArgumentParser(
-        description="ASN Breaker - External Attack Surface Scanner"
-    )
-
-    parser.add_argument("-b", "--bbot", help="Input BBOT ASN table")
-    parser.add_argument("-a", "--asn", help="Scan ASN directly")
-    parser.add_argument("-c", "--cidr", help="Scan specific CIDR")
+    parser.add_argument("--bbot", help="BBOT ASN table file")
+    parser.add_argument("--asn", help="Manual ASN")
+    parser.add_argument("--cidr", help="Manual CIDR")
 
     args = parser.parse_args()
 
-    project_dir, reuse = init_project()
+    show_banner()
+    check_dependencies()
+
+    target = input("Enter Target Name: ").strip()
+
+    project = create_project(target)
+
+    subnets = []
 
     if args.bbot:
+        subnets.extend(parse_bbot_file(args.bbot))
 
-        print("\nParsing BBOT ASN table\n")
-        raw_subnets = parse_bbot_table(args.bbot)
+    if args.cidr:
+        subnets.append(args.cidr)
 
-    elif args.asn:
+    networks = clean_subnets(subnets)
 
-        print("\nFetching ASN prefixes\n")
-        raw_subnets = get_asn_prefixes(args.asn)
+    ips = sample_ips(networks)
 
-    elif args.cidr:
+    ip_file = project / "ips/ip_list.txt"
 
-        raw_subnets = [{"subnet": args.cidr, "limit": 1000}]
+    with open(ip_file,"w") as f:
+        for ip in ips:
+            f.write(ip+"\n")
 
-    else:
+    print(f"[+] Generated {len(ips)} IPs")
 
-        print("Please provide -b OR -a OR -c")
-        return
+    mode = input("Scan all IPs? (y/n): ")
 
-    subnets = analyze_subnets(raw_subnets)
+    if mode.lower() != "y":
+        n = int(input("Enter number of IPs: "))
+        ips = ips[:n]
 
-    ports_file = run_scanner(subnets, project_dir, reuse)
+        with open(ip_file,"w") as f:
+            for ip in ips:
+                f.write(ip+"\n")
 
-    http_file, nuclei_file = run_web_scan(ports_file, project_dir)
+    naabu_out = project / "naabu/ports.txt"
 
-    generate_report(subnets, project_dir)
+    run_naabu(str(ip_file), str(naabu_out))
 
-    print("\nScan Completed\n")
+    httpx_out = project / "httpx/httpx.json"
+
+    run_httpx(str(naabu_out), str(httpx_out))
+
+    urls = project / "httpx/urls.txt"
+
+    with open(httpx_out) as f, open(urls,"w") as out:
+        for line in f:
+            import json
+            data = json.loads(line)
+            if "url" in data:
+                out.write(data["url"]+"\n")
+
+    gowitness_dir = project / "gowitness"
+
+    run_gowitness(str(urls), str(gowitness_dir))
+
+    run_nuclei(str(urls), str(project / "nuclei/nuclei.txt"))
+
+    report_file = project / "reports/final_report.html"
+
+    generate_html_report(str(httpx_out), str(report_file))
+
+    print(f"[✓] Report generated: {report_file}")
 
 
 if __name__ == "__main__":
