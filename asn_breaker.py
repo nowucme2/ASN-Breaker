@@ -34,13 +34,11 @@ def main():
     if args.bbot:
 
         print("\nParsing BBOT ASN table\n")
-
         raw_subnets = parse_bbot_table(args.bbot)
 
     elif args.asn:
 
         print("\nFetching ASN prefixes\n")
-
         raw_subnets = get_asn_prefixes(args.asn)
 
     elif args.cidr:
@@ -58,7 +56,6 @@ def main():
 
     http_file, nuclei_file = run_web_scan(ports_file, project_dir)
 
-    # Always generate report
     generate_report(subnets, project_dir)
 
     print("\nScan Completed\n")
