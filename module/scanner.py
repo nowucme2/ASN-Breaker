@@ -2,44 +2,86 @@ import ipaddress
 import subprocess
 import os
 
-OUTPUT="output"
 
+def generate_ips(subnets, project_dir):
 
-def generate_ips(subnets):
+    ip_file = f"{project_dir}/ips.txt"
 
-    os.makedirs(OUTPUT, exist_ok=True)
-    file = f"{OUTPUT}/ips.txt"
+    print("\nGenerating IP list\n")
 
-    with open(file,"w") as f:
+    with open(ip_file, "w") as f:
 
-        for s in subnets:
+        for entry in subnets:
 
-            network=ipaddress.IPv4Network(s["subnet"])
+            subnet = entry["subnet"]
+            limit = entry["limit"]
 
-            count=0
+            network = ipaddress.IPv4Network(subnet)
+
+            count = 0
 
             for ip in network.hosts():
 
-                if count>=s["limit"]:
+                if count >= limit:
                     break
 
-                f.write(str(ip)+"\n")
+                f.write(str(ip) + "\n")
 
-                count+=1
+                count += 1
 
-    return file
+    print(f"IPs saved to {ip_file}")
+
+    return ip_file
 
 
-def run_scanner(subnets):
+def run_naabu(ip_file, project_dir):
 
-    ip_file=generate_ips(subnets)
+    ports_file = f"{project_dir}/ports.txt"
 
-    ports="output/ports.txt"
+    nmap_file = f"{project_dir}/nmap.xml"
 
-    subprocess.run(["naabu","-list",ip_file,"-top-ports","100","-o",ports])
+    if os.path.exists(nmap_file):
 
-    http="output/http.txt"
+        print("\nExisting Nmap scan detected. Skipping Naabu.\n")
 
-    subprocess.run(f"cat {ports} | httpx-toolkit -silent -o {http}",shell=True)
+        return ports_file
 
-    return http
+    print("\nRunning Naabu scan\n")
+
+    cmd = [
+        "naabu",
+        "-list", ip_file,
+        "-top-ports", "100",
+        "-rate", "5000",
+        "-o", ports_file
+    ]
+
+    subprocess.run(cmd)
+
+    return ports_file
+
+
+def run_httpx(ports_file, project_dir):
+
+    http_file = f"{project_dir}/http.txt"
+
+    print("\nRunning httpx-toolkit\n")
+
+    cmd = f"cat {ports_file} | httpx-toolkit -silent -o {http_file}"
+
+    subprocess.run(cmd, shell=True)
+
+    print(f"HTTP services saved to {http_file}")
+
+    return http_file
+
+
+def run_scanner(subnets, project_dir):
+
+    ip_file = generate_ips(subnets, project_dir)
+
+    ports_file = run_naabu(ip_file, project_dir)
+
+    http_file = run_httpx(ports_file, project_dir)
+
+    return http_file
