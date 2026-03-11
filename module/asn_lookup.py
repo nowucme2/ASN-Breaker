@@ -1,20 +1,24 @@
-import requests
+import ipaddress
 
 
-def get_asn_prefixes(asn):
+def analyze_subnets(raw):
 
-    print(f"\nFetching prefixes for {asn}")
+    result = []
 
-    url = f"https://api.bgpview.io/asn/{asn}/prefixes"
+    for entry in raw:
 
-    data = requests.get(url).json()
+        subnet = entry["subnet"]
+        limit = entry["limit"]
 
-    subnets = []
+        network = ipaddress.IPv4Network(subnet)
 
-    for p in data["data"]["ipv4_prefixes"]:
+        size = network.num_addresses
 
-        subnets.append(p["prefix"])
+        print(f"{subnet} | {size} IPs")
 
-    print(f"Found {len(subnets)} prefixes")
+        result.append({
+            "subnet": subnet,
+            "limit": limit
+        })
 
-    return subnets
+    return result
