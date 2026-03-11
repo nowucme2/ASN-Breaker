@@ -4,7 +4,9 @@ from pathlib import Path
 
 def run_httpx(input_ports, output_json):
 
-    if Path(output_json).exists() and Path(output_json).stat().st_size > 0:
+    output_json = Path(output_json)
+
+    if output_json.exists() and output_json.stat().st_size > 0:
         print("[✓] Reusing httpx results")
         return
 
@@ -21,7 +23,7 @@ def run_httpx(input_ports, output_json):
         "-silent",
         "-json",
         "-o",
-        output_json
+        str(output_json)
     ]
 
     subprocess.run(cmd)
@@ -29,13 +31,18 @@ def run_httpx(input_ports, output_json):
 
 def run_gowitness(url_file, output_dir):
 
-    db = Path(output_dir) / "gowitness.db"
+    output_dir = Path(output_dir)
 
-    if db.exists():
-        print("[✓] Reusing gowitness db")
+    db_path = output_dir / "gowitness.db"
+    screenshot_dir = output_dir / "screenshots"
+
+    screenshot_dir.mkdir(parents=True, exist_ok=True)
+
+    if db_path.exists() and db_path.stat().st_size > 0:
+        print("[✓] Reusing gowitness database")
         return
 
-    print("[*] Running gowitness screenshots...")
+    print("[*] Running gowitness screenshot capture...")
 
     cmd = [
         "gowitness",
@@ -43,10 +50,12 @@ def run_gowitness(url_file, output_dir):
         "file",
         "-f",
         url_file,
-        "--write-db",
-        str(db),
+        "--db-path",
+        str(db_path),
         "--screenshot-path",
-        str(Path(output_dir) / "screenshots")
+        str(screenshot_dir),
+        "--threads",
+        "4"
     ]
 
     subprocess.run(cmd)
@@ -61,34 +70,32 @@ def run_nuclei(url_file, output_file):
         "-l",
         url_file,
 
-        # only important categories
+        # limited important templates
         "-tags",
         "cves,misconfig,exposure,tech",
 
-        # high impact only
+        # severity filtering
         "-severity",
         "critical,high",
 
         # disable interactsh noise
         "-no-interactsh",
 
-        # reduce traffic
+        # low noise settings
         "-rate-limit",
         "30",
 
-        # concurrency
         "-c",
         "5",
 
-        # retries
         "-retries",
         "1",
 
-        # timeout
         "-timeout",
         "4",
 
         "-silent",
+
         "-o",
         output_file
     ]
