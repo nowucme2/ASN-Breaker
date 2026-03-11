@@ -7,7 +7,12 @@ def generate_ips(subnets, project_dir):
 
     ip_file = f"{project_dir}/ips.txt"
 
-    print("\nGenerating IP list\n")
+    if os.path.exists(ip_file):
+
+        print("\nExisting IP list detected. Using old file.")
+        return ip_file
+
+    print("\nGenerating IP list")
 
     with open(ip_file, "w") as f:
 
@@ -29,24 +34,19 @@ def generate_ips(subnets, project_dir):
 
                 count += 1
 
-    print(f"IPs saved to {ip_file}")
-
     return ip_file
 
 
-def run_naabu(ip_file, project_dir):
+def run_naabu(ip_file, project_dir, reuse):
 
     ports_file = f"{project_dir}/ports.txt"
 
-    nmap_file = f"{project_dir}/nmap.xml"
+    if reuse and os.path.exists(ports_file):
 
-    if os.path.exists(nmap_file):
-
-        print("\nExisting Nmap scan detected. Skipping Naabu.\n")
-
+        print("\nUsing existing Naabu results.")
         return ports_file
 
-    print("\nRunning Naabu scan\n")
+    print("\nRunning Naabu scan")
 
     cmd = [
         "naabu",
@@ -65,22 +65,25 @@ def run_httpx(ports_file, project_dir):
 
     http_file = f"{project_dir}/http.txt"
 
-    print("\nRunning httpx-toolkit\n")
+    if os.path.exists(http_file):
+
+        print("\nUsing existing HTTP results.")
+        return http_file
+
+    print("\nRunning httpx-toolkit")
 
     cmd = f"cat {ports_file} | httpx-toolkit -silent -o {http_file}"
 
     subprocess.run(cmd, shell=True)
 
-    print(f"HTTP services saved to {http_file}")
-
     return http_file
 
 
-def run_scanner(subnets, project_dir):
+def run_scanner(subnets, project_dir, reuse):
 
     ip_file = generate_ips(subnets, project_dir)
 
-    ports_file = run_naabu(ip_file, project_dir)
+    ports_file = run_naabu(ip_file, project_dir, reuse)
 
     http_file = run_httpx(ports_file, project_dir)
 
