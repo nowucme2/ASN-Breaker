@@ -1,36 +1,94 @@
 import ipaddress
 import subprocess
 import os
+import random
+import sys
+
+
+def calculate_total_ips(subnets):
+
+    total = 0
+
+    for entry in subnets:
+
+        subnet = entry["subnet"]
+
+        network = ipaddress.IPv4Network(subnet)
+
+        total += network.num_addresses
+
+    return total
+
+
+def ask_scan_limit(total_ips):
+
+    print(f"\nTotal IPs discovered from ASN: {total_ips}\n")
+
+    print("How many IPs do you want to scan?")
+    print("1) 100")
+    print("2) 500")
+    print("3) 1000")
+    print("4) Custom")
+
+    choice = input("\nSelect option: ")
+
+    if choice == "1":
+        return 100
+    elif choice == "2":
+        return 500
+    elif choice == "3":
+        return 1000
+    elif choice == "4":
+        return int(input("Enter number of IPs to scan: "))
+    else:
+        print("Invalid option, defaulting to 500")
+        return 500
 
 
 def generate_ips(subnets, project_dir):
 
     ip_file = f"{project_dir}/ips.txt"
 
-    if not os.path.exists(project_dir):
-        os.makedirs(project_dir)
+    print("\nGenerating IP list...\n")
 
-    print("\nGenerating IP list\n")
+    all_ips = []
+
+    for entry in subnets:
+
+        subnet = entry["subnet"]
+
+        limit = entry["limit"]
+
+        network = ipaddress.IPv4Network(subnet)
+
+        count = 0
+
+        for ip in network.hosts():
+
+            if count >= limit:
+                break
+
+            all_ips.append(str(ip))
+
+            count += 1
+
+    total_ips = len(all_ips)
+
+    scan_limit = ask_scan_limit(total_ips)
+
+    # Randomize IP selection for better coverage
+    random.shuffle(all_ips)
+
+    selected_ips = all_ips[:scan_limit]
+
+    os.makedirs(project_dir, exist_ok=True)
 
     with open(ip_file, "w") as f:
 
-        for entry in subnets:
+        for ip in selected_ips:
+            f.write(ip + "\n")
 
-            subnet = entry["subnet"]
-            limit = entry["limit"]
-
-            network = ipaddress.IPv4Network(subnet)
-
-            count = 0
-
-            for ip in network.hosts():
-
-                if count >= limit:
-                    break
-
-                f.write(str(ip) + "\n")
-
-                count += 1
+    print(f"\nSaved {scan_limit} IPs for scanning")
 
     return ip_file
 
@@ -49,15 +107,33 @@ def run_naabu(ip_file, project_dir):
         "-o", ports_file
     ]
 
-    subprocess.run(cmd)
+    try:
+
+        subprocess.run(cmd)
+
+    except KeyboardInterrupt:
+
+        print("\n\nScan interrupted by user (Ctrl+C)")
+        print("Stopping Naabu scan safely...\n")
+
+        sys.exit(0)
 
     return ports_file
 
 
 def run_scanner(subnets, project_dir, reuse=False):
 
-    ip_file = generate_ips(subnets, project_dir)
+    try:
 
-    ports_file = run_naabu(ip_file, project_dir)
+        ip_file = generate_ips(subnets, project_dir)
 
-    return ports_file
+        ports_file = run_naabu(ip_file, project_dir)
+
+        return ports_file
+
+    except KeyboardInterrupt:
+
+        print("\n\nScan interrupted by user.")
+        print("Exiting ASN Breaker safely.\n")
+
+        sys.exit(0)
