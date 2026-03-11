@@ -1,22 +1,18 @@
 import shutil
-import sys
 
-
-TOOLS = ["naabu", "httpx-toolkit", "gowitness", "nuclei"]
+tools = ["naabu", "httpx-toolkit", "gowitness", "nuclei"]
 
 
 def check_dependencies():
 
     print("\nChecking dependencies\n")
 
-    for tool in TOOLS:
+    for tool in tools:
 
-        if shutil.which(tool) is None:
+        if shutil.which(tool):
 
-            print(f"{tool} not installed")
-
-            sys.exit()
+            print(f"{tool} OK")
 
         else:
 
-            print(f"{tool} OK")
+            print(f"{tool} NOT FOUND")
