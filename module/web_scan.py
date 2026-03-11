@@ -4,8 +4,8 @@ import os
 
 def run_web_scan(http_file, project_dir):
 
-    screenshots_dir = f"{project_dir}/screenshots"
-    nuclei_file = f"{project_dir}/nuclei.txt"
+    screenshots_dir = os.path.join(project_dir, "screenshots")
+    nuclei_file = os.path.join(project_dir, "nuclei.txt")
 
     os.makedirs(screenshots_dir, exist_ok=True)
 
@@ -15,21 +15,19 @@ def run_web_scan(http_file, project_dir):
         "gowitness",
         "scan",
         "file",
-        "-f", http_file,
+        "-f", "http.txt",
         "--threads", "20",
-        "--screenshot-path", screenshots_dir,
+        "--screenshot-path", "screenshots",
         "--write-db"
     ]
 
-    subprocess.run(cmd)
+    subprocess.run(cmd, cwd=project_dir)
 
     print("\nScreenshots completed.")
 
-    # Ask user if nuclei should run
     choice = input("\nDo you want to run Nuclei vulnerability scan? (y/n): ").strip().lower()
 
     if choice != "y":
-
         print("\nSkipping Nuclei scan.")
         return
 
