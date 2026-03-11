@@ -11,7 +11,7 @@ def run_httpx(input_ports, output_json):
     cmd = [
         "httpx-toolkit",
         "-l",
-        input_ports,
+        str(input_ports),
         "-title",
         "-tech-detect",
         "-status-code",
@@ -20,7 +20,6 @@ def run_httpx(input_ports, output_json):
         "-json"
     ]
 
-    # append results
     if output_json.exists():
 
         print("[*] Appending httpx results...")
@@ -49,7 +48,7 @@ def run_gowitness(url_file, output_dir):
         "scan",
         "file",
         "-f",
-        url_file,
+        str(Path(url_file).resolve()),   # FIX: absolute path
         "--write-db",
         "--screenshot-path",
         str(screenshot_dir),
@@ -57,7 +56,7 @@ def run_gowitness(url_file, output_dir):
         "4"
     ]
 
-    subprocess.run(cmd)
+    subprocess.run(cmd, cwd=str(output_dir))
 
 
 def run_nuclei(url_file, output_file):
@@ -67,7 +66,7 @@ def run_nuclei(url_file, output_file):
     cmd = [
         "nuclei",
         "-l",
-        url_file,
+        str(url_file),
 
         "-tags",
         "cves,misconfig,exposure,tech",
@@ -92,7 +91,7 @@ def run_nuclei(url_file, output_file):
         "-silent",
 
         "-o",
-        output_file
+        str(output_file)
     ]
 
     subprocess.run(cmd)
