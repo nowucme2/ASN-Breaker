@@ -1,88 +1,59 @@
-import ipaddress
 import subprocess
 import os
-import random
 
 
-def generate_ips(subnets, project_dir):
+def run_web_scan(ports_file, project_dir):
 
-    ip_file = f"{project_dir}/ips.txt"
+    http_file = f"{project_dir}/http.txt"
+    screenshots_dir = f"{project_dir}/screenshots"
+    nuclei_file = f"{project_dir}/nuclei.txt"
 
-    all_ips = []
+    os.makedirs(screenshots_dir, exist_ok=True)
 
-    for entry in subnets:
+    print("\nRunning httpx-toolkit\n")
 
-        network = ipaddress.IPv4Network(entry["subnet"])
-
-        for ip in network.hosts():
-
-            all_ips.append(str(ip))
-
-    total = len(all_ips)
-
-    print(f"\nTotal IPs discovered: {total}\n")
-
-    print("1) 100")
-    print("2) 500")
-    print("3) 1000")
-    print("4) Custom")
-    print("5) Scan All")
-
-    choice = input("Select option: ")
-
-    if choice == "1":
-        limit = 100
-    elif choice == "2":
-        limit = 500
-    elif choice == "3":
-        limit = 1000
-    elif choice == "4":
-        limit = int(input("Enter custom number: "))
-    else:
-        limit = total
-
-    random.shuffle(all_ips)
-
-    selected = all_ips[:limit]
-
-    with open(ip_file, "w") as f:
-
-        for ip in selected:
-
-            f.write(ip + "\n")
-
-    print(f"Saved {len(selected)} IPs for scanning")
-
-    return ip_file
-
-
-def run_naabu(ip_file, project_dir):
-
-    ports_file = f"{project_dir}/ports.txt"
-
-    cmd = [
-        "naabu",
-        "-list", ip_file,
-        "-top-ports", "100",
-        "-rate", "5000",
-        "-o", ports_file
+    httpx_cmd = [
+        "httpx-toolkit",
+        "-l", ports_file,
+        "-silent",
+        "-o", http_file
     ]
 
-    subprocess.run(cmd)
+    subprocess.run(httpx_cmd)
 
-    return ports_file
+    # If no HTTP services found
+    if not os.path.exists(http_file) or os.path.getsize(http_file) == 0:
+        print("No HTTP services discovered")
+        return http_file, None
 
+    print("\nRunning Gowitness screenshots\n")
 
-def run_scanner(subnets, project_dir, reuse=False):
+    gowitness_cmd = [
+        "gowitness",
+        "scan",
+        "file",
+        "-f", http_file,
+        "--threads", "20",
+        "--write-db",
+        "--screenshot-path", screenshots_dir
+    ]
 
-    ports_file = f"{project_dir}/ports.txt"
+    subprocess.run(gowitness_cmd, cwd=project_dir)
 
-    if reuse and os.path.exists(ports_file):
+    run_nuclei = input("\nRun Nuclei scan? (y/n): ").lower()
 
-        print("Using existing Naabu results")
+    if run_nuclei == "y":
 
-        return ports_file
+        print("\nRunning Nuclei\n")
 
-    ip_file = generate_ips(subnets, project_dir)
+        nuclei_cmd = [
+            "nuclei",
+            "-l", http_file,
+            "-o", nuclei_file
+        ]
 
-    return run_naabu(ip_file, project_dir)
+        subprocess.run(nuclei_cmd)
+
+        return http_file, nuclei_file
+
+    return http_file, None
