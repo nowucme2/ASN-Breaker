@@ -1,17 +1,13 @@
 import subprocess
-import os
 from pathlib import Path
+import os
 
 
 def run_naabu(ip_list, output_file):
 
-    output_path = Path(output_file)
+    output_file = Path(output_file)
 
-    if output_path.exists() and output_path.stat().st_size > 0:
-        print("[✓] Reusing existing naabu scan")
-        return
-
-    print("[*] Preparing Naabu scan (top 1000 ports)...")
+    print("[*] Running naabu scan...")
 
     cmd = [
         "naabu",
@@ -20,18 +16,27 @@ def run_naabu(ip_list, output_file):
         "-top-ports",
         "1000",
         "-rate",
-        "2000",
-        "-o",
-        output_file
+        "2000"
     ]
 
-    # Check if running as root
+    # check root privilege
     if os.geteuid() != 0:
-        ans = input("[!] Naabu SYN scan requires root privileges. Run with sudo? (y/n): ").strip().lower()
+        ans = input("[!] Naabu SYN scan needs root. Run with sudo? (y/n): ").strip().lower()
         if ans == "y":
             cmd.insert(0, "sudo")
-        else:
-            print("[*] Running without root (CONNECT scan - slower)")
 
-    print("[*] Running Naabu...")
-    subprocess.run(cmd)
+    # append results instead of skipping
+    if output_file.exists():
+
+        print("[*] Appending new naabu results...")
+
+        with open(output_file, "a") as f:
+            subprocess.run(cmd, stdout=f)
+
+    else:
+
+        print("[*] Running initial naabu scan...")
+
+        cmd.extend(["-o", str(output_file)])
+
+        subprocess.run(cmd)
