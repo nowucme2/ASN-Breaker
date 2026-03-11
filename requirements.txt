@@ -1,4 +1,1 @@
-naabu
-httpx-toolkit
-gowitness
-nuclei
+requests>=2.31.0
