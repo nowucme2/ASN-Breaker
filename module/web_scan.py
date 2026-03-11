@@ -1,77 +1,88 @@
+import ipaddress
 import subprocess
 import os
+import random
 
 
-def run_web_scan(ports_file, project_dir):
+def generate_ips(subnets, project_dir):
 
-    http_file = f"{project_dir}/http.txt"
-    screenshots_dir = f"{project_dir}/screenshots"
-    gowitness_db = f"{project_dir}/gowitness.sqlite3"
-    nuclei_file = f"{project_dir}/nuclei.txt"
+    ip_file = f"{project_dir}/ips.txt"
 
-    os.makedirs(screenshots_dir, exist_ok=True)
+    all_ips = []
 
-    # -------------------------
-    # Step 1: HTTP discovery
-    # -------------------------
+    for entry in subnets:
 
-    print("\nRunning httpx-toolkit\n")
+        network = ipaddress.IPv4Network(entry["subnet"])
 
-    cmd_httpx = [
-        "httpx-toolkit",
-        "-l", ports_file,
-        "-silent",
-        "-o", http_file
-    ]
+        for ip in network.hosts():
 
-    subprocess.run(cmd_httpx)
+            all_ips.append(str(ip))
 
-    if not os.path.exists(http_file) or os.path.getsize(http_file) == 0:
+    total = len(all_ips)
 
-        print("\nNo HTTP services found.\n")
-        return http_file, None
+    print(f"\nTotal IPs discovered: {total}\n")
 
-    # -------------------------
-    # Step 2: Screenshots
-    # -------------------------
+    print("1) 100")
+    print("2) 500")
+    print("3) 1000")
+    print("4) Custom")
+    print("5) Scan All")
 
-    print("\nRunning Gowitness screenshots\n")
+    choice = input("Select option: ")
 
-    cmd_gowitness = [
-        "gowitness",
-        "scan",
-        "file",
-        "-f", http_file,
-        "--write-db",
-        "--db-path", gowitness_db,
-        "--screenshot-path", screenshots_dir,
-        "--threads", "20"
-    ]
-
-    subprocess.run(cmd_gowitness)
-
-    # -------------------------
-    # Step 3: Ask nuclei
-    # -------------------------
-
-    run_nuclei = input("\nRun Nuclei vulnerability scan? (y/n): ").strip().lower()
-
-    if run_nuclei == "y":
-
-        print("\nRunning Nuclei scan\n")
-
-        cmd_nuclei = [
-            "nuclei",
-            "-l", http_file,
-            "-o", nuclei_file
-        ]
-
-        subprocess.run(cmd_nuclei)
-
-        return http_file, nuclei_file
-
+    if choice == "1":
+        limit = 100
+    elif choice == "2":
+        limit = 500
+    elif choice == "3":
+        limit = 1000
+    elif choice == "4":
+        limit = int(input("Enter custom number: "))
     else:
+        limit = total
 
-        print("\nSkipping Nuclei scan\n")
+    random.shuffle(all_ips)
 
-        return http_file, None
+    selected = all_ips[:limit]
+
+    with open(ip_file, "w") as f:
+
+        for ip in selected:
+
+            f.write(ip + "\n")
+
+    print(f"Saved {len(selected)} IPs for scanning")
+
+    return ip_file
+
+
+def run_naabu(ip_file, project_dir):
+
+    ports_file = f"{project_dir}/ports.txt"
+
+    cmd = [
+        "naabu",
+        "-list", ip_file,
+        "-top-ports", "100",
+        "-rate", "5000",
+        "-o", ports_file
+    ]
+
+    subprocess.run(cmd)
+
+    return ports_file
+
+
+def run_scanner(subnets, project_dir, reuse=False):
+
+    ports_file = f"{project_dir}/ports.txt"
+
+    if reuse and os.path.exists(ports_file):
+
+        print("Using existing Naabu results")
+
+        return ports_file
+
+    ip_file = generate_ips(subnets, project_dir)
+
+    return run_naabu(ip_file, project_dir)
