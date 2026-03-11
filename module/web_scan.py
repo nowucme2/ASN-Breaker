@@ -8,6 +8,8 @@ def run_httpx(input_ports, output_json):
         print("[✓] Reusing httpx results")
         return
 
+    print("[*] Running httpx scan...")
+
     cmd = [
         "httpx-toolkit",
         "-l",
@@ -16,6 +18,7 @@ def run_httpx(input_ports, output_json):
         "-tech-detect",
         "-status-code",
         "-server",
+        "-silent",
         "-json",
         "-o",
         output_json
@@ -31,6 +34,8 @@ def run_gowitness(url_file, output_dir):
     if db.exists():
         print("[✓] Reusing gowitness db")
         return
+
+    print("[*] Running gowitness screenshots...")
 
     cmd = [
         "gowitness",
@@ -49,12 +54,37 @@ def run_gowitness(url_file, output_dir):
 
 def run_nuclei(url_file, output_file):
 
+    print("[*] Running nuclei (low-noise red team mode)...")
+
     cmd = [
         "nuclei",
         "-l",
         url_file,
+
+        # only important vulns
         "-severity",
         "critical,high,medium",
+
+        # disable interactsh noise
+        "-no-interactsh",
+
+        # reduce traffic
+        "-rate-limit",
+        "50",
+
+        # concurrency control
+        "-c",
+        "10",
+
+        # retries
+        "-retries",
+        "1",
+
+        # timeout
+        "-timeout",
+        "5",
+
+        "-silent",
         "-o",
         output_file
     ]
