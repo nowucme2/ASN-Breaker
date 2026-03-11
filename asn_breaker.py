@@ -10,6 +10,7 @@ from module.subnet_intel import clean_subnets, sample_ips
 from module.scanner import run_naabu
 from module.web_scan import run_httpx, run_gowitness, run_nuclei
 from module.report import generate_html_report
+from module.logger import setup_logger
 
 
 def load_progress(progress_file):
@@ -42,13 +43,17 @@ def main():
 
     target, project = select_or_create_project()
 
+    logger = setup_logger(project)
+
+    logger.info(f"Project started: {target}")
+
     ips_dir = project / "ips"
     ips_dir.mkdir(exist_ok=True)
 
     master_ip_file = ips_dir / "master_ip_list.txt"
     progress_file = ips_dir / "progress.json"
 
-    # generate IP list only once
+    # Generate IP list only once
     if not master_ip_file.exists():
 
         subnets = []
@@ -63,7 +68,7 @@ def main():
 
         ips = sample_ips(networks)
 
-        print(f"\nTotal IPs discovered: {len(ips)}")
+        logger.info(f"Generated master IP list ({len(ips)} IPs)")
 
         with open(master_ip_file, "w") as f:
             for ip in ips:
@@ -75,6 +80,8 @@ def main():
 
         with open(master_ip_file) as f:
             ips = [x.strip() for x in f.readlines()]
+
+        logger.info(f"Loaded existing IP list ({len(ips)} IPs)")
 
     progress = load_progress(progress_file)
 
@@ -106,15 +113,21 @@ def main():
 
     save_progress(progress_file, new_index)
 
+    logger.info(f"Batch {batch_id} started (IPs {start_index} → {new_index})")
+
     print(f"\nScanning IP range {start_index} → {new_index}")
 
     naabu_out = project / "naabu" / "ports.txt"
     naabu_out.parent.mkdir(exist_ok=True)
 
+    logger.info("Running Naabu scan")
+
     run_naabu(str(ip_file), str(naabu_out))
 
     httpx_out = project / "httpx" / "httpx.json"
     httpx_out.parent.mkdir(exist_ok=True)
+
+    logger.info("Running HTTPX scan")
 
     run_httpx(str(naabu_out), str(httpx_out))
 
@@ -128,6 +141,8 @@ def main():
 
     gowitness_dir = project / "gowitness"
 
+    logger.info("Running Gowitness screenshots")
+
     run_gowitness(str(urls), str(gowitness_dir))
 
     run_nuclei_scan = input("\nRun Nuclei scan? (y/n): ").strip().lower()
@@ -137,12 +152,20 @@ def main():
         nuclei_output = project / "nuclei" / "nuclei.txt"
         nuclei_output.parent.mkdir(exist_ok=True)
 
+        logger.info("Running Nuclei scan")
+
         run_nuclei(str(urls), str(nuclei_output))
+
+    else:
+
+        logger.info("Nuclei scan skipped")
 
     report_file = project / "reports" / "final_report.html"
     report_file.parent.mkdir(exist_ok=True)
 
     generate_html_report(str(httpx_out), str(report_file))
+
+    logger.info("Report generated")
 
     print(f"\n[✓] Report generated: {report_file}")
 
