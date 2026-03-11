@@ -5,13 +5,13 @@
 <!-- =============================== -->
 
 <p align="center">
-  <img src="https://cdn-icons-png.flaticon.com/512/616/616408.png" width="110"/>
+<img src="assets/Ch " width="850"/>
 </p>
 
-<h1 align="center" style="color:#ff2e2e;">ASN Breaker</h1>
+<h1 align="center">ASN Breaker</h1>
 
 <p align="center">
-<strong style="color:#ff2e2e;">Recon Automation Framework</strong><br>
+Recon Automation Framework<br>
 Created by <b>Abhishek CN</b>
 </p>
 
