@@ -1,24 +1,45 @@
-import ipaddress
+import subprocess
+import re
 
 
-def analyze_subnets(raw):
+def get_asn_prefixes(asn):
 
-    result = []
+    print(f"\nFetching prefixes for ASN {asn}\n")
 
-    for entry in raw:
+    try:
 
-        subnet = entry["subnet"]
-        limit = entry["limit"]
+        result = subprocess.run(
+            ["whois", f"AS{asn}"],
+            capture_output=True,
+            text=True
+        )
 
-        network = ipaddress.IPv4Network(subnet)
+        output = result.stdout
 
-        size = network.num_addresses
+    except Exception as e:
 
-        print(f"{subnet} | {size} IPs")
+        print("ASN lookup failed:", e)
+        return []
 
-        result.append({
+    prefixes = set()
+
+    for line in output.splitlines():
+
+        match = re.search(r"(\\d+\\.\\d+\\.\\d+\\.\\d+/\\d+)", line)
+
+        if match:
+
+            prefixes.add(match.group(1))
+
+    subnets = []
+
+    for subnet in prefixes:
+
+        subnets.append({
             "subnet": subnet,
-            "limit": limit
+            "limit": 1000
         })
 
-    return result
+    print(f"Found {len(subnets)} prefixes from ASN\n")
+
+    return subnets
