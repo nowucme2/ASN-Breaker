@@ -49,15 +49,16 @@ def main():
 
     else:
 
-        print("Please provide -b (BBOT file) OR -a (ASN) OR -c (CIDR)")
+        print("Please provide -b OR -a OR -c")
         return
 
     subnets = analyze_subnets(raw_subnets)
 
     ports_file = run_scanner(subnets, project_dir, reuse)
 
-    http_file = run_web_scan(ports_file, project_dir)
+    http_file, nuclei_file = run_web_scan(ports_file, project_dir)
 
+    # Always generate report
     generate_report(subnets, project_dir)
 
     print("\nScan Completed\n")
