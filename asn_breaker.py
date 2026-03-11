@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 
 from module.banner import show_banner
@@ -9,7 +11,6 @@ from module.project import init_project
 from module.scanner import run_scanner
 from module.web_scan import run_web_scan
 from module.report import generate_report
-from module.domain_filter import domain_filter
 
 
 def main():
@@ -18,11 +19,13 @@ def main():
 
     check_dependencies()
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="ASN Breaker - External Attack Surface Scanner"
+    )
 
-    parser.add_argument("-b", "--bbot", help="BBOT ASN table")
-    parser.add_argument("-a", "--asn", help="ASN number")
-    parser.add_argument("-c", "--cidr", help="CIDR subnet")
+    parser.add_argument("-b", "--bbot", help="Input BBOT ASN table")
+    parser.add_argument("-a", "--asn", help="Scan ASN directly")
+    parser.add_argument("-c", "--cidr", help="Scan specific CIDR")
 
     args = parser.parse_args()
 
@@ -30,31 +33,34 @@ def main():
 
     if args.bbot:
 
+        print("\nParsing BBOT ASN table\n")
+
         raw_subnets = parse_bbot_table(args.bbot)
 
     elif args.asn:
+
+        print("\nFetching ASN prefixes\n")
 
         raw_subnets = get_asn_prefixes(args.asn)
 
     elif args.cidr:
 
-        raw_subnets = [args.cidr]
+        raw_subnets = [{"subnet": args.cidr, "limit": 1000}]
 
     else:
 
-        print("Provide -b OR -a OR -c")
+        print("Please provide -b (BBOT file) OR -a (ASN) OR -c (CIDR)")
         return
 
     subnets = analyze_subnets(raw_subnets)
 
-    ip_file = run_scanner(subnets, project_dir, reuse)
+    ports_file = run_scanner(subnets, project_dir, reuse)
 
-    # NEW DOMAIN FILTER
-    filtered_ips = domain_filter(ip_file, project_dir)
-
-    http_file = run_web_scan(filtered_ips, project_dir)
+    http_file = run_web_scan(ports_file, project_dir)
 
     generate_report(subnets, project_dir)
+
+    print("\nScan Completed\n")
 
 
 if __name__ == "__main__":
