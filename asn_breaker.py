@@ -40,10 +40,41 @@ def main():
 
     check_dependencies()
 
-    # project selection
     target, project = select_or_create_project()
 
-    progress_file = project / "ips/progress.json"
+    ips_dir = project / "ips"
+    ips_dir.mkdir(exist_ok=True)
+
+    master_ip_file = ips_dir / "master_ip_list.txt"
+    progress_file = ips_dir / "progress.json"
+
+    # generate IP list only once
+    if not master_ip_file.exists():
+
+        subnets = []
+
+        if args.bbot:
+            subnets.extend(parse_bbot_file(args.bbot))
+
+        if args.cidr:
+            subnets.append(args.cidr)
+
+        networks = clean_subnets(subnets)
+
+        ips = sample_ips(networks)
+
+        print(f"\nTotal IPs discovered: {len(ips)}")
+
+        with open(master_ip_file, "w") as f:
+            for ip in ips:
+                f.write(ip + "\n")
+
+    else:
+
+        print("[✓] Reusing existing master IP list")
+
+        with open(master_ip_file) as f:
+            ips = [x.strip() for x in f.readlines()]
 
     progress = load_progress(progress_file)
 
@@ -56,25 +87,16 @@ def main():
         if ans.lower() != "y":
             start_index = 0
 
-    subnets = []
-
-    if args.bbot:
-        subnets.extend(parse_bbot_file(args.bbot))
-
-    if args.cidr:
-        subnets.append(args.cidr)
-
-    networks = clean_subnets(subnets)
-
-    ips = sample_ips(networks)
-
-    print(f"\nTotal IPs discovered: {len(ips)}")
-
     count = int(input("How many IPs to scan now: "))
 
     selected_ips = ips[start_index:start_index + count]
 
-    ip_file = project / "ips/ip_list.txt"
+    batch_id = (start_index // count) + 1
+
+    batch_dir = project / "batches" / f"batch_{batch_id}"
+    batch_dir.mkdir(parents=True, exist_ok=True)
+
+    ip_file = batch_dir / "ip_list.txt"
 
     with open(ip_file, "w") as f:
         for ip in selected_ips:
@@ -86,48 +108,39 @@ def main():
 
     print(f"\nScanning IP range {start_index} → {new_index}")
 
-    # run naabu
-    naabu_out = project / "naabu/ports.txt"
+    naabu_out = project / "naabu" / "ports.txt"
+    naabu_out.parent.mkdir(exist_ok=True)
 
     run_naabu(str(ip_file), str(naabu_out))
 
-    # run httpx
-    httpx_out = project / "httpx/httpx.json"
+    httpx_out = project / "httpx" / "httpx.json"
+    httpx_out.parent.mkdir(exist_ok=True)
 
     run_httpx(str(naabu_out), str(httpx_out))
 
-    # extract urls
-    urls = project / "httpx/urls.txt"
+    urls = project / "httpx" / "urls.txt"
 
     with open(httpx_out) as f, open(urls, "w") as out:
         for line in f:
             data = json.loads(line)
-
             if "url" in data:
                 out.write(data["url"] + "\n")
 
-    # gowitness
     gowitness_dir = project / "gowitness"
 
     run_gowitness(str(urls), str(gowitness_dir))
 
-    # nuclei optional
     run_nuclei_scan = input("\nRun Nuclei scan? (y/n): ").strip().lower()
 
     if run_nuclei_scan == "y":
 
-        nuclei_output = project / "nuclei/nuclei.txt"
+        nuclei_output = project / "nuclei" / "nuclei.txt"
+        nuclei_output.parent.mkdir(exist_ok=True)
 
         run_nuclei(str(urls), str(nuclei_output))
 
-        print("[✓] Nuclei scan completed")
-
-    else:
-
-        print("[*] Skipping Nuclei scan")
-
-    # generate report
-    report_file = project / "reports/final_report.html"
+    report_file = project / "reports" / "final_report.html"
+    report_file.parent.mkdir(exist_ok=True)
 
     generate_html_report(str(httpx_out), str(report_file))
 
