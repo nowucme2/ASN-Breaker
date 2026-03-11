@@ -1,13 +1,46 @@
 import subprocess
 import os
 
+OUTPUT_DIR = "output"
+
+
+def run_gowitness(http_file):
+
+    print("\nRunning Gowitness screenshots\n")
+
+    os.makedirs(f"{OUTPUT_DIR}/screenshots", exist_ok=True)
+
+    cmd = [
+        "gowitness",
+        "scan",
+        "file",
+        "-f", http_file,
+        "--threads", "20",
+        "--write-db"
+    ]
+
+    subprocess.run(cmd)
+
+
+def run_nuclei(http_file):
+
+    print("\nRunning Nuclei scan\n")
+
+    nuclei_output = f"{OUTPUT_DIR}/nuclei.txt"
+
+    cmd = [
+        "nuclei",
+        "-l", http_file,
+        "-o", nuclei_output
+    ]
+
+    subprocess.run(cmd)
+
+    print(f"Vulnerabilities saved to {nuclei_output}")
+
 
 def run_web_scan(http_file):
 
-    screenshots="output/screenshots"
+    run_gowitness(http_file)
 
-    subprocess.run(["gowitness","scan","file","-f",http_file,"-P",screenshots])
-
-    nuclei_out="output/nuclei.txt"
-
-    subprocess.run(["nuclei","-l",http_file,"-severity","critical,high,medium","-o",nuclei_out])
+    run_nuclei(http_file)
