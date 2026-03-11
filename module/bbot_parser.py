@@ -3,19 +3,22 @@ import re
 
 def parse_bbot_table(file):
 
-    print("\nParsing BBOT ASN table\n")
-
     subnets = []
 
     with open(file) as f:
 
         for line in f:
 
-            match = re.search(r"\d+\.\d+\.\d+\.\d+\/\d+", line)
+            match = re.search(r"(\d+\.\d+\.\d+\.\d+/\d+)", line)
 
             if match:
 
-                subnets.append(match.group())
+                subnet = match.group(1)
+
+                subnets.append({
+                    "subnet": subnet,
+                    "limit": 1000
+                })
 
     print(f"Found {len(subnets)} subnets")
 
