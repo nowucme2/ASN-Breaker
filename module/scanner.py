@@ -1,67 +1,38 @@
 import ipaddress
-import os
 import subprocess
+import os
 
 
 def generate_ips(subnets, project_dir):
 
-    full_ip_file = f"{project_dir}/ips_full.txt"
-    scan_ip_file = f"{project_dir}/ips_scan.txt"
+    ip_file = f"{project_dir}/ips.txt"
 
-    print("\nCalculating total IP count...\n")
+    if not os.path.exists(project_dir):
+        os.makedirs(project_dir)
 
-    total_ips = 0
+    print("\nGenerating IP list\n")
 
-    for entry in subnets:
-
-        subnet = entry["subnet"]
-        network = ipaddress.IPv4Network(subnet)
-
-        total_ips += network.num_addresses
-
-    print(f"Total IPs discovered: {total_ips}\n")
-
-    choice = input(
-        "How many IPs do you want to scan?\n"
-        "1) 100\n"
-        "2) 500\n"
-        "3) 1000\n"
-        "4) Custom\n"
-        "Select option: "
-    )
-
-    if choice == "1":
-        scan_limit = 100
-    elif choice == "2":
-        scan_limit = 500
-    elif choice == "3":
-        scan_limit = 1000
-    else:
-        scan_limit = int(input("Enter custom number: "))
-
-    print("\nGenerating IP list...\n")
-
-    count = 0
-
-    with open(full_ip_file, "w") as full_f, open(scan_ip_file, "w") as scan_f:
+    with open(ip_file, "w") as f:
 
         for entry in subnets:
 
             subnet = entry["subnet"]
+            limit = entry["limit"]
+
             network = ipaddress.IPv4Network(subnet)
+
+            count = 0
 
             for ip in network.hosts():
 
-                full_f.write(str(ip) + "\n")
+                if count >= limit:
+                    break
 
-                if count < scan_limit:
-                    scan_f.write(str(ip) + "\n")
-                    count += 1
+                f.write(str(ip) + "\n")
 
-    print(f"Full IP list saved to: {full_ip_file}")
-    print(f"Scan IP list saved to: {scan_ip_file}\n")
+                count += 1
 
-    return scan_ip_file
+    return ip_file
 
 
 def run_naabu(ip_file, project_dir):
@@ -79,5 +50,14 @@ def run_naabu(ip_file, project_dir):
     ]
 
     subprocess.run(cmd)
+
+    return ports_file
+
+
+def run_scanner(subnets, project_dir, reuse=False):
+
+    ip_file = generate_ips(subnets, project_dir)
+
+    ports_file = run_naabu(ip_file, project_dir)
 
     return ports_file
