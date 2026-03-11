@@ -54,27 +54,31 @@ def run_gowitness(url_file, output_dir):
 
 def run_nuclei(url_file, output_file):
 
-    print("[*] Running nuclei (low-noise red team mode)...")
+    print("[*] Running nuclei (stealth red-team mode)...")
 
     cmd = [
         "nuclei",
         "-l",
         url_file,
 
-        # only important vulns
+        # only important categories
+        "-tags",
+        "cves,misconfig,exposure,tech",
+
+        # high impact only
         "-severity",
-        "critical,high,medium",
+        "critical,high",
 
         # disable interactsh noise
         "-no-interactsh",
 
         # reduce traffic
         "-rate-limit",
-        "50",
+        "30",
 
-        # concurrency control
+        # concurrency
         "-c",
-        "10",
+        "5",
 
         # retries
         "-retries",
@@ -82,7 +86,7 @@ def run_nuclei(url_file, output_file):
 
         # timeout
         "-timeout",
-        "5",
+        "4",
 
         "-silent",
         "-o",
