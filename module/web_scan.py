@@ -6,10 +6,6 @@ def run_httpx(input_ports, output_json):
 
     output_json = Path(output_json)
 
-    if output_json.exists() and output_json.stat().st_size > 0:
-        print("[✓] Reusing httpx results")
-        return
-
     print("[*] Running httpx scan...")
 
     cmd = [
@@ -21,12 +17,22 @@ def run_httpx(input_ports, output_json):
         "-status-code",
         "-server",
         "-silent",
-        "-json",
-        "-o",
-        str(output_json)
+        "-json"
     ]
 
-    subprocess.run(cmd)
+    # append results
+    if output_json.exists():
+
+        print("[*] Appending httpx results...")
+
+        with open(output_json, "a") as f:
+            subprocess.run(cmd, stdout=f)
+
+    else:
+
+        cmd.extend(["-o", str(output_json)])
+
+        subprocess.run(cmd)
 
 
 def run_gowitness(url_file, output_dir):
@@ -62,20 +68,29 @@ def run_nuclei(url_file, output_file):
         "nuclei",
         "-l",
         url_file,
+
         "-tags",
         "cves,misconfig,exposure,tech",
+
         "-severity",
         "critical,high",
+
         "-no-interactsh",
+
         "-rate-limit",
         "30",
+
         "-c",
         "5",
+
         "-retries",
         "1",
+
         "-timeout",
         "4",
+
         "-silent",
+
         "-o",
         output_file
     ]
