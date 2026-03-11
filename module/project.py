@@ -1,34 +1,18 @@
-import os
+from pathlib import Path
 
+def create_project(target):
+    base = Path("output") / target
 
-def init_project():
+    dirs = [
+        "ips",
+        "naabu",
+        "httpx",
+        "gowitness",
+        "nuclei",
+        "reports"
+    ]
 
-    project = input("Enter project name: ").strip()
+    for d in dirs:
+        (base / d).mkdir(parents=True, exist_ok=True)
 
-    base = f"output/{project}"
-
-    if os.path.exists(base):
-
-        print("Project already exists.")
-
-        print("1) Use existing scan data")
-        print("2) Run new scan")
-        print("3) Exit")
-
-        choice = input("Select option: ")
-
-        if choice == "1":
-
-            return base, True
-
-        elif choice == "2":
-
-            return base, False
-
-        else:
-
-            exit()
-
-    os.makedirs(base, exist_ok=True)
-
-    return base, False
+    return base
