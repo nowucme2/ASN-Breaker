@@ -1,9 +1,6 @@
 def show_banner():
 
-    print("""
-========================================
-        ASN BREAKER
- External Attack Surface Scanner
- Created by = Abhiske CN
-========================================
-""")
+    print("="*40)
+    print("ASN Breaker - External Attack Surface Scanner")
+    print("Author: Abhishek CN")
+    print("="*40)
